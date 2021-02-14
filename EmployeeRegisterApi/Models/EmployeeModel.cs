@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Http;
 
 namespace EmployeeRegisterApi.Models
 {
@@ -16,5 +17,8 @@ namespace EmployeeRegisterApi.Models
         
         [Column(TypeName = "nvarchar(150)")]
         public string ImageName { get; set; }
+        
+        [NotMapped]
+        public IFormFile ImageFile { get; set; }
     }
 }

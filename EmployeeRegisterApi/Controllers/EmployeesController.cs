@@ -1,7 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using EmployeeRegisterApi.Context;
 using EmployeeRegisterApi.Models;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,10 +17,12 @@ namespace EmployeeRegisterApi.Controllers
     public class EmployeesController: ControllerBase
     {
         private readonly EmployeeAppContext _context;
+        private readonly IWebHostEnvironment _hostEnvironment;
 
-        public EmployeesController(EmployeeAppContext context)
+        public EmployeesController(EmployeeAppContext context, IWebHostEnvironment hostEnvironment)
         {
             _context = context;
+            _hostEnvironment = hostEnvironment;
         }
 
         [HttpGet]
@@ -38,8 +45,9 @@ namespace EmployeeRegisterApi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(EmployeeModel employeeModel)
+        public async Task<IActionResult> Create([FromForm]EmployeeModel employeeModel)
         {
+            employeeModel.ImageName = await SaveImage(employeeModel.ImageFile);
             await _context.Employees.AddAsync(employeeModel);
             await _context.SaveChangesAsync();
             return Created("", employeeModel);
@@ -70,6 +78,18 @@ namespace EmployeeRegisterApi.Controllers
             _context.Entry<EmployeeModel>(employee).State = EntityState.Deleted;
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        [NonAction]
+        public async Task<string> SaveImage(IFormFile file)
+        {
+            var fileName =
+                new String(Path.GetFileNameWithoutExtension(file.FileName).Take(10).ToArray()).Replace(' ', '-');
+            fileName += DateTime.Now.ToString("yymmssfff") + Path.GetExtension(file.FileName);
+            var imagePath = Path.Combine(_hostEnvironment.ContentRootPath, "Images/", fileName);
+            await using var fileStream = new FileStream(imagePath, FileMode.Create);
+            await file.CopyToAsync(fileStream);
+            return fileName;
         }
     }
 }
